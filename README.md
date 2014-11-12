@@ -39,4 +39,4 @@ This work is under the free software licence [CeCILL](http://www.cecill.info/).
 For more information open the folder copyrights.
 
 ## Members:
-HUILON He and ROUALDES Fabien (Institut Mines-Télécom)
+HE Huilong and ROUALDES Fabien (Institut Mines-Télécom)
