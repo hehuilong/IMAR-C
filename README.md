@@ -3,11 +3,17 @@ IMAR-C
 
 IMAR-C (Intermedia Action Recognition in C/C++ language) is a set of action recognition tools allowing the robot NAO recognize the human actions.
 It contains:
+
 NAO Vision Teacher: generate vision learning model for the robot.
+
 visionAction: can be implemented on the robot to recognize human actions through his camera.
+
 recordVideoLocal: can be implemented on the robot to capture video.
+
 argvToSpeech: can send the words to the robot and make it speek.
+
 decreaseSize: decrease the size of video.
+
 detectFps: detect the fps of video.
 
 ## Activities
@@ -26,6 +32,7 @@ For the moment the activities had to be recorded in a 2-second video (our video 
 
 ## Sources:
 * SVM: [http://www.csie.ntu.edu.tw/~cjlin/libsvm/](http://www.csie.ntu.edu.tw/~cjlin/libsvm/):
+
 Chih-Chung Chang and Chih-Jen Lin, LIBSVM : a library for support
 vector machines. ACM Transactions on Intelligent Systems and
 Technology, 2:27:1--27:27, 2011. Software available at
@@ -37,6 +44,7 @@ http://www.csie.ntu.edu.tw/~cjlin/libsvm
 
 ## Licence:
 This work is under the free software licence [CeCILL](http://www.cecill.info/).
+
 For more information open the LICENCE file.
 
 ## Members:
