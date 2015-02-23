@@ -1,0 +1,65 @@
+<?xml version="1.0" ?>
+<!--Modify BDD name, BDD folder, Activities and People for a new database.--> 
+<!--The other information will be modified automatically by the program when executed.-->
+<BDD name="F12S160clean" folder="bdd/F12S160clean">
+    <!--Configuration of the BDD-->
+    <Data>
+        <Activities>
+            <Activitiy name="open_door" />
+            <Activitiy name="close_door" />
+            <Activitiy name="fall_down" />
+            <Activitiy name="remote_control" />
+            <Activitiy name="stand_up" />
+            <Activitiy name="write" />
+            <Activitiy name="sit_down" />
+            <Activitiy name="applaud" />
+            <Activitiy name="walk" />
+            <Activitiy name="drink" />
+            <Activitiy name="phone_call" />
+        </Activities>
+        <People>
+            <Person name="mouna" />
+            <Person name="ahmed" />
+            <Person name="mounim" />
+            <Person name="spock" />
+            <Person name="ivan" />
+            <Person name="vincent" />
+        </People>
+        <TestPeople>
+            <TestPerson name="lagrange" />
+            <TestPerson name="huilong" />
+        </TestPeople>
+        <Reject name="" />
+    </Data>
+    <DenseTrack>
+        <!--The feature points extractor-->
+        <Scale scale_num="4" />
+        <Descriptor type="all" dim="396" />
+    </DenseTrack>
+    <KMeans algorithm="special">
+        <Centers>
+            <k nr="330" />
+            <file path="training.means" />
+        </Centers>
+    </KMeans>
+    <Normalization type="non">
+        <Means path="means.txt" />
+        <StandardDeviation path="stand_devia.txt" />
+    </Normalization>
+    <SVM>
+        <Class nr="11" />
+        <Models>
+            <Model path="bdd/F12S160clean/svm_ovr_0.model" />
+            <Model path="bdd/F12S160clean/svm_ovr_1.model" />
+            <Model path="bdd/F12S160clean/svm_ovr_2.model" />
+            <Model path="bdd/F12S160clean/svm_ovr_3.model" />
+            <Model path="bdd/F12S160clean/svm_ovr_4.model" />
+            <Model path="bdd/F12S160clean/svm_ovr_5.model" />
+            <Model path="bdd/F12S160clean/svm_ovr_6.model" />
+            <Model path="bdd/F12S160clean/svm_ovr_7.model" />
+            <Model path="bdd/F12S160clean/svm_ovr_8.model" />
+            <Model path="bdd/F12S160clean/svm_ovr_9.model" />
+            <Model path="bdd/F12S160clean/svm_ovr_10.model" />
+        </Models>
+    </SVM>
+</BDD>

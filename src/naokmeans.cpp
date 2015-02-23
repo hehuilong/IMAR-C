@@ -151,7 +151,7 @@ void importCenters(std::string centers, int dim, int k, KMfilterCenters* ctrs){
  */
 void kmIvanAlgorithm(int ic, int dim,  const KMdata& dataPts, int k, KMfilterCenters& ctrs){
   int nPts = dataPts.getNPts();
-  KMdata subDataPts(dim,nPts); // maxPts = nPts since subDataPts is a sample of dataPts
+  KMdata subDataPts(dim,nPts);
 
   int* randomVector = NULL;
   
@@ -164,6 +164,7 @@ void kmIvanAlgorithm(int ic, int dim,  const KMdata& dataPts, int k, KMfilterCen
   // ic : iteration coefficient
   int nrPhases = 3;
   for(int i=0 ; i<nrPhases ; i++){
+    std::cerr<<"phase:"<<i<<std::endl;
     int maxIter = (int) pow(2,(nrPhases-1-i));
     int sampleSize = floor(nPts/maxIter);
     
@@ -181,75 +182,80 @@ void kmIvanAlgorithm(int ic, int dim,  const KMdata& dataPts, int k, KMfilterCen
     if (i == nrPhases-1){
       // Filling subDataPts
       for(int s=0; s<nPts ; s++){
-	for(int d=0 ; d<dim ; d++){
-	  subDataPts[s][d] = dataPts[s][d];
-	}
+	      for(int d=0 ; d<dim ; d++){
+	        subDataPts[s][d] = dataPts[s][d];
+	      }
       }
       subDataPts.setNPts(nPts);
     }
     else{
       // Filling the random vector permiting to sampling "uniformly" (as more as we can) the data  
+      //std::cerr<<"ok++"<<std::endl; 
       randomVector = (int*) malloc(sampleSize * sizeof(int));
       srand(time(NULL)); // initialisation of rand
       for(int s=0; s<sampleSize ;s++){
-	int r = (int) rand()%(nPts);
-	int index = 0;
-	while(index<s && randomVector[index] != r){
-	  index++;
-	}
-	if(s==0 || randomVector[index] != r)
-	  randomVector[s] = r;
-	else{
-	  s--;
-	}
+	      int r = (int) rand()%(nPts);
+	      int index = 0;
+	      while(index<s && randomVector[index] != r){
+	        index++;
+	      }
+	      if(s==0 || randomVector[index] != r)
+	        randomVector[s] = r;
+	      else{
+	        s--;
+	      }
       }
-      
+      //std::cerr<<"ok--"<<std::endl; 
       // Filling subDataPts
       for(int s=0; s<sampleSize ; s++){
-	for(int d=0 ; d<dim ; d++){
-	  subDataPts[s][d] = dataPts[randomVector[s]][d];
-	}
+	      for(int d=0 ; d<dim ; d++){
+	        subDataPts[s][d] = dataPts[randomVector[s]][d];
+	      }
       }
       subDataPts.setNPts(sampleSize);
     }
     subDataPts.buildKcTree();
     
     // Allocate centers with subData
-    KMfilterCenters* newCtrs = new KMfilterCenters(k, subDataPts);
+    KMfilterCenters newCtrs(k, subDataPts);
     
     // Initializing the centers (randomly for the first iteration)
     if(i==0){
-      (*newCtrs).genRandom(); 
+      (newCtrs).genRandom(); 
     }
     else{
       for(int c = 0; c < k ; c++){
-	for(int d=0 ; d<dim ; d++){
-	  (*newCtrs)[c][d] = centersBuffer[c][d];
-	}
+	      for(int d=0 ; d<dim ; d++){
+	        (newCtrs)[c][d] = centersBuffer[c][d];
+	      }
       } 
     }
     for(int iteration = 0  ; iteration < ic*maxIter ; iteration++){ // ic : iteration coefficient
-      (*newCtrs).lloyd1Stage();
+      (newCtrs).lloyd1Stage();
     }
     
     // Saving the old centers in centersBuffer
     for(int c = 0; c < k ; c++){
       for(int d=0 ; d<dim ; d++){
-	centersBuffer[c][d] = (*newCtrs)[c][d];
+	      centersBuffer[c][d] = (newCtrs)[c][d];
       }
     }
-    delete newCtrs;
     
     if(i==nrPhases-1){
       for(int c = 0; c < k ; c++){
-	for(int d=0 ; d<dim ; d++){
-	  ctrs[c][d] = centersBuffer[c][d];
-	}
+	      for(int d=0 ; d<dim ; d++){
+	        ctrs[c][d] = centersBuffer[c][d];
+	      }
       }
     }
     free(randomVector);
     randomVector = NULL;
   }
+
+  for(int c=0 ; c<k ; c++){
+    free(centersBuffer[c]);
+  }
+  free(centersBuffer);
 }
 
 /**
@@ -267,15 +273,19 @@ void createTrainingMeans(std::string stipFile,
 			 int dim,
 			 int maxPts,
 			 int k,
-			 std::string meansFile){
+                         std::string meansFile
+                         ){
+
   KMdata dataPts(dim,maxPts);
   int nPts = importSTIPs(stipFile, dim, maxPts, &dataPts);
   dataPts.setNPts(nPts);
   dataPts.buildKcTree();
   
-  KMfilterCenters ctrs(k, dataPts);  
-  int ic = 3;
+  KMfilterCenters ctrs(k, dataPts);    
   
-  kmIvanAlgorithm(ic, dim, dataPts, k, ctrs);
+  int ic = 3;
+  kmIvanAlgorithm(ic, dim, dataPts, k, ctrs);  
+  
   exportCenters(meansFile, dim, k, ctrs);
 }
+

@@ -1,7 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" href="$naomngt_8cpp.html#a7e4b446c4f6730a426cd269fafeb39cd" title="Creates a new activity in the specified BDD." alt="" coords="141,5,227,35"/>
-<area shape="rect" href="$naomngt_8cpp.html#aee407c4eb98cc449a0faf764ea3dca33" title="Adds a new video in the choosen activity of the specified BDD." alt="" coords="143,59,225,88"/>
-<area shape="rect" href="$naomngt_8cpp.html#a725875b0f5b8af913ad9869004c31042" title="Deletes an existant activity in the specified BDD." alt="" coords="135,112,233,141"/>
-<area shape="rect" href="$naomngt_8cpp.html#aa0040386aa02e6e5c5b3c441ca85d56f" title="Trains the specified BDD." alt="" coords="149,165,219,195"/>
-<area shape="rect" href="$naomngt_8cpp.html#ad96e8cbd0dcce75de84448326b987773" title="Deletes a BDD." alt="" coords="283,112,363,141"/>
-</map>

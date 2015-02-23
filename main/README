@@ -1,0 +1,65 @@
+NAO Vison Teacher v1.0
+
+1. Extract the feature points:
+./nvteacher refresh <name of the database> <number of scales> <descriptor>
+--<descriptor> list:
+  hoghof:
+    dimention: 204
+  mbh:
+    dimention: 192
+  all:
+    dimention: 396 (hog+hof+mbh)
+
+2. Clustering on the feature points:
+./nvteacher kmeans <name of the database> <number of centers> <kmeans type> 
+--<kmeans type> list:
+  normal: KMeans direct on all the feature points.
+  special: KMeans on the feature points of each class, concatenation of the centers of each class. In this case, <number of centers> must be divisible by the number of classes.
+
+3. Machine learning (SVM OvR)
+./nvteacher learn <name of the database> <kernel> <normalization type>
+--<kernel> list:
+  linear: linear kernel
+  polynomial: polynomial kernel
+  rbf: rbf kernel
+  sigmoid: sigmoid kernel
+  chis: chi2 kernel, sum{2*x_i*y_i/(x_i+y_i)}
+  rbfchis: rbfchi2 kernel, exp(-1/A * 1/2 * sum{(x_i-y_i)^2/(x_i+y_i)})
+  inters: intersection kernel, sum{min(x_i,y_i)} 
+--<normalization type> list:
+  non: no normalization
+  simple: x_i'=x_i/sum{x}
+  gaussian: gaussian normalization
+  all: simple+gaussian
+
+4. Database
+Always put the database tree in the 'main/bdd' folder.
+Structure of the database tree:
+(un example database with 2 person and 2 activities)
+bddname
+  ├── imconfig.xml 
+  ├── person1 
+  │   ├── activity1 
+  │   │   ├── avi
+  │   │   │   ├── video1.avi
+  │   │   │   ├── video2.avi
+  │   │   │   └── video3.avi
+  │   │   └── fp
+  │   └── activity2 
+  │       ├── avi
+  │       │   ├── video4.avi
+  │       │   └── video5.avi
+  │       └── fp
+  └── person2 
+      ├── activity1 
+      │   ├── avi
+      │   │   └── video6.avi
+      │   └── fp
+      └── activity2 
+          ├── avi
+          │   ├── video7.avi
+          │   └── video8.avi
+          └── fp
+Tips:
+  The folder 'fp' is for containing the feature points files.  
+  the persons and activities folder name must be the same as in the file imconfig.xml.

@@ -1,8 +1,10 @@
 /** 
  * \file naodensetrack.cpp
  * \brief  Set of function permiting to extract dense points and their trajectories.
- * \author LEAR 
- * \date 05/07/2013
+ * \author LEAR
+ * \author Fabien ROUALDES
+ * \author Huilong HE
+ * \date 19/08/2013
  */
 #include "naodensetrack.h"
 
@@ -45,7 +47,7 @@ void BuildDescMat(const IplImage* xComp, // x gradient component
   float fullAngle = descInfo.fullOrientation ? 360 : 180;
   // one additional bin for hof
   int nBins = descInfo.flagThre ? descInfo.nBins-1 : descInfo.nBins;
-	// angle stride for quantization
+  // angle stride for quantization
   float angleBase = fullAngle/float(nBins);
   int width = descMat->width;
   int height = descMat->height;
@@ -75,7 +77,7 @@ void BuildDescMat(const IplImage* xComp, // x gradient component
 	float orientation = cvFastArctan(shiftY, shiftX);
 	if(orientation > fullAngle)
 	  orientation -= fullAngle;
-
+		
 	// split the magnitude to two adjacent bins
 	float fbin = orientation/angleBase;
 	bin0 = cvFloor(fbin);
@@ -83,7 +85,7 @@ void BuildDescMat(const IplImage* xComp, // x gradient component
 	float weight1 = 1 - weight0;
 	bin0 %= nBins;
 	bin1 = (bin0+1)%nBins;
-	
+		
 	magnitude0 *= weight0;
 	magnitude1 *= weight1;
       }
@@ -200,13 +202,14 @@ void HofComp(IplImage* flow, DescMat* descMat, DescInfo descInfo){
 void MbhComp(IplImage* flow, DescMat* descMatX, DescMat* descMatY, DescInfo descInfo){
   int width = descMatX->width;
   int height = descMatX->height;
+
   IplImage* flowX = cvCreateImage(cvSize(width,height), IPL_DEPTH_32F, 1);
   IplImage* flowY = cvCreateImage(cvSize(width,height), IPL_DEPTH_32F, 1);
   IplImage* flowXdX = cvCreateImage(cvSize(width,height), IPL_DEPTH_32F, 1);
   IplImage* flowXdY = cvCreateImage(cvSize(width,height), IPL_DEPTH_32F, 1);
   IplImage* flowYdX = cvCreateImage(cvSize(width,height), IPL_DEPTH_32F, 1);
   IplImage* flowYdY = cvCreateImage(cvSize(width,height), IPL_DEPTH_32F, 1);
-  
+
   // extract the x and y components of the flow
   for(int i = 0; i < height; i++) {
     const float* f = (const float*)(flow->imageData + flow->widthStep*i);
@@ -217,7 +220,7 @@ void MbhComp(IplImage* flow, DescMat* descMatX, DescMat* descMatY, DescInfo desc
       fY[j] = 100*f[2*j+1];
     }
   }
-  
+
   cvSobel(flowX, flowXdX, 1, 0, 1);
   cvSobel(flowX, flowXdY, 0, 1, 1);
   cvSobel(flowY, flowYdX, 1, 0, 1);
@@ -440,47 +443,47 @@ void usage(){
 }
 
 /*void arg_parse(int argc, char** argv)
-{
-int c;
-	char* executable = basename(argv[0]);
-	while((c = getopt (argc, argv, "hS:E:L:W:N:s:t:")) != -1)
-	switch(c) {
-		case 'S':
-		start_frame = atoi(optarg);
-		break;
-		case 'E':
-		end_frame = atoi(optarg);
-		break;
-		case 'L':
-		track_length = atoi(optarg);
-		break;
-		case 'W':
-		min_distance = atoi(optarg);
-		break;
-		case 'N':
-		patch_size = atoi(optarg);
-		break;
-		case 's':
-		nxy_cell = atoi(optarg);
-		break;
-		case 't':
-		nt_cell = atoi(optarg);
-		break;
+  {
+  int c;
+  char* executable = basename(argv[0]);
+  while((c = getopt (argc, argv, "hS:E:L:W:N:s:t:")) != -1)
+  switch(c) {
+  case 'S':
+  start_frame = atoi(optarg);
+  break;
+  case 'E':
+  end_frame = atoi(optarg);
+  break;
+  case 'L':
+  track_length = atoi(optarg);
+  break;
+  case 'W':
+  min_distance = atoi(optarg);
+  break;
+  case 'N':
+  patch_size = atoi(optarg);
+  break;
+  case 's':
+  nxy_cell = atoi(optarg);
+  break;
+  case 't':
+  nt_cell = atoi(optarg);
+  break;
 
-		case 'h':
-		usage();
-		exit(0);
-		break;
+  case 'h':
+  usage();
+  exit(0);
+  break;
 
-		default:
-		fprintf(stderr, "error parsing arguments at -%c\n  Try '%s -h' for help.", c, executable );
-		abort();
-	}
-	}*/
+  default:
+  fprintf(stderr, "error parsing arguments at -%c\n  Try '%s -h' for help.", c, executable );
+  abort();
+  }
+  }*/
 
 /**
- * \fn int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts)
- * \brief Permits to extract STIPs from a video .avi. It save the HOG and HOG of the trajectories in the object KMdata.
+ * \fn int extractFeaturePoints(std::string video, int dim, int maxPts, KMdata* dataPts)
+ * \brief Permits to extract STIPs from a video .avi. It save the MBH of the trajectories in the object KMdata.
  *
  * \param[in] stip Name of the video.
  * \param[in] dim STIPs dimension.
@@ -488,7 +491,12 @@ int c;
  * \param[out] dataPts The object in which we save the STIPs.
  * \return Number of points extracted.
  */
-int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
+int extract_feature_points(std::string video,
+			   int scale_num,
+			   std::string descriptor,
+			   int dim,
+			   int maxPts,
+			   KMdata& dataPts){
   int frameNum = 0;
   TrackerInfo tracker;
   DescInfo hogInfo;
@@ -525,13 +533,13 @@ int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
   const float max_dis = 20;
    
   // parameters for multi-scale
-  int scale_num = 8;  
+  //int scale_num = 0; (in [1,8])
   const float scale_stride = sqrt(2);
-
+  
   //arg_parse(argc, argv);
   
-  //	std::cerr << "start_frame: " << start_frame << " end_frame: " << end_frame << " track_length: " << track_length << std::endl;
-  //	std::cerr << "min_distance: " << min_distance << " patch_size: " << patch_size << " nxy_cell: " << nxy_cell << " nt_cell: " << nt_cell << std::endl;
+  //std::cerr << "start_frame: " << start_frame << " end_frame: " << end_frame << " track_length: " << track_length << std::endl;
+  //std::cerr << "min_distance: " << min_distance << " patch_size: " << patch_size << " nxy_cell: " << nxy_cell << " nt_cell: " << nt_cell << std::endl;
   
   InitTrackerInfo(&tracker, track_length, init_gap);
   InitDescInfo(&hogInfo, 8, 0, 1, patch_size, nxy_cell, nt_cell, min_flow);
@@ -551,7 +559,7 @@ int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
   
   std::vector<std::list<Track> > xyScaleTracks;
   int init_counter = 0; // indicate when to detect new feature points
-  int nPts = 0; // actual number of points (or the number of HOG & HOF)
+  int nPts = 0; // actual number of points
   while( true ) {
     IplImage* frame = 0;
     int i, j, c;
@@ -574,20 +582,20 @@ int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
 	prev_grey = IplImageWrapper( cvGetSize(frame), 8, 1 );
 	prev_grey_pyramid = IplImagePyramid( cvGetSize(frame), 8, 1, scale_stride );
 	eig_pyramid = IplImagePyramid( cvGetSize(frame), 32, 1, scale_stride );
-	
+		
 	cvCopy( frame, image, 0 );
 	cvCvtColor( image, grey, CV_BGR2GRAY );
 	grey_pyramid.rebuild( grey );
-	
+		
 	// how many scale we can have
 	scale_num = std::min<std::size_t>(scale_num, grey_pyramid.numOfLevels());
 	fscales = (float*)cvAlloc(scale_num*sizeof(float));
 	xyScaleTracks.resize(scale_num);
-	
+		
 	for( int ixyScale = 0; ixyScale < scale_num; ++ixyScale ) {
 	  std::list<Track>& tracks = xyScaleTracks[ixyScale];
 	  fscales[ixyScale] = pow(scale_stride, ixyScale);
-
+		
 	  // find good features at each scale separately
 	  IplImage *grey_temp = 0, *eig_temp = 0;
 	  std::size_t temp_level = (std::size_t)ixyScale;
@@ -595,7 +603,7 @@ int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
 	  eig_temp = cvCloneImage(eig_pyramid.getImage(temp_level));
 	  std::vector<CvPoint2D32f> points(0);
 	  cvDenseSample(grey_temp, eig_temp, points, quality, min_distance);
-	  
+		  
 	  // save the feature points
 	  for( i = 0; i < points.size(); i++ ) {
 	    Track track(tracker.trackLength);
@@ -603,7 +611,7 @@ int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
 	    track.addPointDesc(point);
 	    tracks.push_back(track);
 	  }
-	  
+		  
 	  cvReleaseImage( &grey_temp );
 	  cvReleaseImage( &eig_temp );
 	}
@@ -629,33 +637,41 @@ int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
 	  std::size_t temp_level = ixyScale;
 	  prev_grey_temp = cvCloneImage(prev_grey_pyramid.getImage(temp_level));
 	  grey_temp = cvCloneImage(grey_pyramid.getImage(temp_level));
-	  
+		  
 	  cv::Mat prev_grey_mat = cv::cvarrToMat(prev_grey_temp);
 	  cv::Mat grey_mat = cv::cvarrToMat(grey_temp);
-	  
+		  
 	  std::vector<int> status(count);
 	  std::vector<CvPoint2D32f> points_out(count);
-	  
-			// compute the optical flow
+		  
+	  // compute the optical flow
 	  IplImage* flow = cvCreateImage(cvGetSize(grey_temp), IPL_DEPTH_32F, 2);
 	  cv::Mat flow_mat = cv::cvarrToMat(flow);
 	  cv::calcOpticalFlowFarneback( prev_grey_mat, grey_mat, flow_mat,
 					sqrt(2)/2.0, 5, 10, 2, 7, 1.5, cv::OPTFLOW_FARNEBACK_GAUSSIAN );
 	  // track feature points by median filtering
 	  OpticalFlowTracker(flow, points_in, points_out, status);
-	  
+		  
 	  int width = grey_temp->width;
 	  int height = grey_temp->height;
-	  // compute the integral histograms
-	  DescMat* hogMat = InitDescMat(height, width, hogInfo.nBins);
-	  HogComp(prev_grey_temp, hogMat, hogInfo);
 	  
-	  DescMat* hofMat = InitDescMat(height, width, hofInfo.nBins);
-	  HofComp(flow, hofMat, hofInfo);
-	  
-	  DescMat* mbhMatX = InitDescMat(height, width, mbhInfo.nBins);
-	  DescMat* mbhMatY = InitDescMat(height, width, mbhInfo.nBins);
-	  MbhComp(flow, mbhMatX, mbhMatY, mbhInfo);
+	  // Computing histograms
+	  DescMat* hogMat = NULL;
+	  DescMat* hofMat = NULL;
+	  DescMat* mbhMatX = NULL;
+	  DescMat* mbhMatY = NULL;
+	  if(descriptor.compare("hoghof") == 0 || descriptor.compare("all") == 0){
+	    hogMat = InitDescMat(height, width, hogInfo.nBins);
+	    HogComp(prev_grey_temp, hogMat, hogInfo);
+	    
+	    hofMat = InitDescMat(height, width, hofInfo.nBins);
+	    HofComp(flow, hofMat, hofInfo);
+	  }
+	  if(descriptor.compare("mbh") == 0 || descriptor.compare("all") == 0){
+	    mbhMatX = InitDescMat(height, width, mbhInfo.nBins);
+	    mbhMatY = InitDescMat(height, width, mbhInfo.nBins);
+	    MbhComp(flow, mbhMatX, mbhMatY, mbhInfo);
+	  }
 	  
 	  i = 0;
 	  for (std::list<Track>::iterator iTrack = tracks.begin(); iTrack != tracks.end(); ++i) {
@@ -663,15 +679,20 @@ int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
 	      PointDesc& pointDesc = iTrack->pointDescs.back();
 	      CvPoint2D32f prev_point = points_in[i];
 	      // get the descriptors for the feature point
-	      CvScalar rect = getRect(prev_point, cvSize(width, height), hogInfo);
-	      pointDesc.hog = getDesc(hogMat, rect, hogInfo, epsilon);
-	      pointDesc.hof = getDesc(hofMat, rect, hofInfo, epsilon);
-	      pointDesc.mbhX = getDesc(mbhMatX, rect, mbhInfo, epsilon);
-	      pointDesc.mbhY = getDesc(mbhMatY, rect, mbhInfo, epsilon);
-
+	      CvScalar rect;
+	      if(descriptor.compare("hoghof") == 0 || descriptor.compare("all") == 0){
+		rect = getRect(prev_point, cvSize(width, height), hogInfo);
+		pointDesc.hog = getDesc(hogMat, rect, hogInfo, epsilon);
+		pointDesc.hof = getDesc(hofMat, rect, hofInfo, epsilon);
+	      }
+	      if(descriptor.compare("mbh") == 0 || descriptor.compare("all") == 0){
+		rect = getRect(prev_point, cvSize(width, height), mbhInfo);
+		pointDesc.mbhX = getDesc(mbhMatX, rect, mbhInfo, epsilon);
+		pointDesc.mbhY = getDesc(mbhMatY, rect, mbhInfo, epsilon);
+	      }
 	      PointDesc point(hogInfo, hofInfo, mbhInfo, points_out[i]);
 	      iTrack->addPointDesc(point);
-	      
+		      
 	      // draw this track
 	      if( show_track == 1 ) {
 		std::list<PointDesc>& descs = iTrack->pointDescs;
@@ -680,13 +701,13 @@ int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
 		CvPoint2D32f point0 = iDesc->point;
 		point0.x *= fscales[ixyScale]; // map the point to first scale
 		point0.y *= fscales[ixyScale];
-		
+			
 		float j = 0; 
 		for (iDesc++; iDesc != descs.end(); ++iDesc, ++j) {
 		  CvPoint2D32f point1 = iDesc->point;
 		  point1.x *= fscales[ixyScale];
 		  point1.y *= fscales[ixyScale];
-
+		
 		  cvLine(image, cvPointFrom32f(point0), cvPointFrom32f(point1),
 			 CV_RGB(0,cvFloor(255.0*(j+1.0)/length),0), 2, 8,0);
 		  point0 = point1;
@@ -698,15 +719,20 @@ int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
 	    else // remove the track, if we lose feature point
 	      iTrack = tracks.erase(iTrack);
 	  }
-	  ReleDescMat(hogMat);
-	  ReleDescMat(hofMat);
-	  ReleDescMat(mbhMatX);
-	  ReleDescMat(mbhMatY);
+	  // Releasing memory
+	  if(descriptor.compare("hoghof") == 0 || descriptor.compare("all") == 0){
+	    ReleDescMat(hogMat);
+	    ReleDescMat(hofMat);
+	  }
+	  if(descriptor.compare("mbh") == 0 || descriptor.compare("all") == 0){
+	    ReleDescMat(mbhMatX);
+	    ReleDescMat(mbhMatY);
+	  }
 	  cvReleaseImage( &prev_grey_temp );
 	  cvReleaseImage( &grey_temp );
 	  cvReleaseImage( &flow );
 	}
-	
+
 	for( int ixyScale = 0; ixyScale < scale_num; ++ixyScale ) {
 	  std::list<Track>& tracks = xyScaleTracks[ixyScale]; // output the features for each scale
 	  for( std::list<Track>::iterator iTrack = tracks.begin(); iTrack != tracks.end(); ) {
@@ -726,68 +752,80 @@ int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
 		//printf("%f\t%f\t", var_x, var_y);
 		//printf("%f\t", length);
 		//printf("%f\t", fscales[ixyScale]);
-		
+				
 		//for (int count = 0; count < tracker.trackLength; ++count)
-		  //printf("%f\t%f\t", trajectory[count].x,trajectory[count].y );
-		
+		//printf("%f\t%f\t", trajectory[count].x,trajectory[count].y );
+				
 		int d = 0; // to fill dataPts 
-		iDesc = descs.begin();
-		int t_stride = cvFloor(tracker.trackLength/hogInfo.ntCells);
-		for( int n = 0; n < hogInfo.ntCells; n++ ) {
-		  std::vector<float> vec(hogInfo.dim);
-		  for( int t = 0; t < t_stride; t++, iDesc++ )
+		
+		// COMPUTE HOG HOG
+		if(descriptor.compare("hoghof") == 0 || descriptor.compare("all") == 0){
+		  iDesc = descs.begin();
+		  int t_stride = cvFloor(tracker.trackLength/hogInfo.ntCells);
+		  for( int n = 0; n < hogInfo.ntCells; n++ ) {
+		    std::vector<float> vec(hogInfo.dim);
+		    for( int t = 0; t < t_stride; t++, iDesc++ )
 		    for( int m = 0; m < hogInfo.dim; m++ )
 		      vec[m] += iDesc->hog[m];
-		  for( int m = 0; m < hogInfo.dim; m++ ){
-		    //printf("%f\t", vec[m]/float(t_stride));
-		    (*dataPts)[nPts][d] = vec[m]/float(t_stride);
-			d++;
-			}
+		    for( int m = 0; m < hogInfo.dim; m++ ){
+		      // printf("%f\t", vec[m]/float(t_stride));
+		      dataPts[nPts][d] = vec[m]/float(t_stride);
+		      d++;
+		    }
+		  }
+		  
+		  iDesc = descs.begin();
+		  t_stride = cvFloor(tracker.trackLength/hofInfo.ntCells);
+		  for( int n = 0; n < hofInfo.ntCells; n++ ) {
+		    std::vector<float> vec(hofInfo.dim);
+		    for( int t = 0; t < t_stride; t++, iDesc++ )
+		      for( int m = 0; m < hofInfo.dim; m++ )
+			vec[m] += iDesc->hof[m];
+		    for( int m = 0; m < hofInfo.dim; m++ ){
+		      //printf("%f\t", vec[m]/float(t_stride));
+		      dataPts[nPts][d] = vec[m]/float(t_stride);
+		      d++;
+		    }
+		  }
 		}
 		
-		iDesc = descs.begin();
-		t_stride = cvFloor(tracker.trackLength/hofInfo.ntCells);
-		for( int n = 0; n < hofInfo.ntCells; n++ ) {
-		  std::vector<float> vec(hofInfo.dim);
-		  for( int t = 0; t < t_stride; t++, iDesc++ )
-		    for( int m = 0; m < hofInfo.dim; m++ )
-		      vec[m] += iDesc->hof[m];
-		  for( int m = 0; m < hofInfo.dim; m++ ){
-		    //printf("%f\t", vec[m]/float(t_stride));
-		(*dataPts)[nPts][d] = vec[m]/float(t_stride);
-		   d++;
-}      
+		// COMPUTE MBHX AND MBHY
+		if(descriptor.compare("mbh") == 0 || descriptor.compare("all") == 0){
+		  iDesc = descs.begin();
+		  int t_stride = cvFloor(tracker.trackLength/mbhInfo.ntCells);
+		  for( int n = 0; n < mbhInfo.ntCells; n++ ) {
+		    std::vector<float> vec(mbhInfo.dim);
+		    for( int t = 0; t < t_stride; t++, iDesc++ )
+		      for( int m = 0; m < mbhInfo.dim; m++ )
+			vec[m] += iDesc->mbhX[m];
+		    for( int m = 0; m < mbhInfo.dim; m++ ){
+		      dataPts[nPts][d] = vec[m]/float(t_stride);
+		      d++;
+		    }
+		  }
+		  
+		  iDesc = descs.begin();
+		  t_stride = cvFloor(tracker.trackLength/mbhInfo.ntCells);
+		  for( int n = 0; n < mbhInfo.ntCells; n++ ) {
+		    std::vector<float> vec(mbhInfo.dim);
+		    for( int t = 0; t < t_stride; t++, iDesc++ )
+		      for( int m = 0; m < mbhInfo.dim; m++ )
+			vec[m] += iDesc->mbhY[m];
+		    
+		    for( int m = 0; m < mbhInfo.dim; m++ ){
+		      dataPts[nPts][d] = vec[m]/float(t_stride);
+		      d++;
+		    }
+		  }
 		}
 		
-		iDesc = descs.begin();
-		t_stride = cvFloor(tracker.trackLength/mbhInfo.ntCells);
-		for( int n = 0; n < mbhInfo.ntCells; n++ ) {
-		  std::vector<float> vec(mbhInfo.dim);
-		  for( int t = 0; t < t_stride; t++, iDesc++ )
-		    for( int m = 0; m < mbhInfo.dim; m++ )
-		      vec[m] += iDesc->mbhX[m];
-		  //for( int m = 0; m < mbhInfo.dim; m++ )
-		    //printf("%f\t", vec[m]/float(t_stride));
-		}
-		
-		iDesc = descs.begin();
-		t_stride = cvFloor(tracker.trackLength/mbhInfo.ntCells);
-		for( int n = 0; n < mbhInfo.ntCells; n++ ) {
-		  std::vector<float> vec(mbhInfo.dim);
-		  for( int t = 0; t < t_stride; t++, iDesc++ )
-		    for( int m = 0; m < mbhInfo.dim; m++ )
-		      vec[m] += iDesc->mbhY[m];
-		  //for( int m = 0; m < mbhInfo.dim; m++ )
-		    //printf("%f\t", vec[m]/float(t_stride));
-		}
-		
-		//printf("\n");
+		// Following vector
 		nPts++;
 	      }
 	      iTrack = tracks.erase(iTrack);
-			}
+	    }
 	    else
-				iTrack++;
+	      iTrack++;
 	  }
 	}
 	
@@ -834,10 +872,9 @@ int extractSTIPs(std::string video, int dim, int maxPts, KMdata* dataPts){
     }
     // get the next frame
     frameNum++;
-    
   }
   
   if( show_track == 1 )
     cvDestroyWindow("DenseTrack");
-	return nPts;
+  return nPts;
 }

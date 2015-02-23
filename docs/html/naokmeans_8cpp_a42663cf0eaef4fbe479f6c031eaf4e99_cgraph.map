@@ -1,5 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" href="$naokmeans_8cpp.html#a70fee2c407d3bf32b07943b8cfcb3c7e" title="Export function to save KMfilterCenters in a file. One line corresponds to one point..." alt="" coords="204,5,305,35"/>
-<area shape="rect" href="$naokmeans_8cpp.html#a4a594810a9a736a792e6b2571dfc2170" title="STIPs importation function in the format 1 point = 1 line. Each dimension are separated..." alt="" coords="208,59,301,88"/>
-<area shape="rect" href="$naokmeans_8cpp.html#a1239738af8b88f74abba7ca22baaf46c" title="This is an optimized KMeans algorithm. Ivan&#39;s algorithm uses basic KMeans algorithm..." alt="" coords="195,112,315,141"/>
-</map>

@@ -1,177 +1,12 @@
 /** 
  * \file naosvm.cpp
  * \brief Set of functions permiting to import/ predict a svm problem, import/create a svm model
- * \author Fabien ROUALDES (institut Mines-Télécom)
+ * \author ROUALDES Fabien (Télécom SudParis)
+ * \author HE Huilong (Télécom SudParis)
  * \date 17/07/2013 
 */
 #include "naosvm.h" 
-
-/**
- * \fn struct svm_problem importProblem(std::string file, int k)
- * \brief SVM Importation function. It read a file in the following format:
- * label 1:value 2:value 3:value (each lines).
- *
- * \param[in] file File containing the svm problem.
- * \param[in] k The number of clusters.
- * \return The svm problem in a structure.
- */
-struct svm_problem importProblem(std::string file, int k){
-  int l = nrOfLines(file);
-  
-  std::cout << "Mallocing svmProblem..." << std::endl;
-  struct svm_problem svmProblem;
-  svmProblem.l = l;
-  svmProblem.y = (double*) malloc(svmProblem.l * sizeof(double));
-  svmProblem.x = (struct svm_node **) malloc(svmProblem.l * sizeof(struct svm_node *));
-  
-  float* bowTab = new float[k];
-  int label;
-  
-  std::cout << "Opening problem..." << std::endl;
-  std::ifstream in(file.c_str(),ios::in);
-  if(!in){
-    cerr << "Can't open the file to test !" << endl;
-    exit(EXIT_FAILURE);
-  }
-  int idActivity = 0;
-  std::string line; // We read the file line by line
-  while(idActivity < l && std::getline(in, line)){
-    std::istringstream lss(line);
-    // bowTab is reseting to 0
-    for(int i = 0 ; i < k ; i++){
-      bowTab[i] = .0;
-    }
-    lss >> label;
-    svmProblem.y[idActivity] = label;
-    int center = 0;
-    bool endOfLine = false;
-    while(!endOfLine && center < k){
-      std::string tmpFloat;
-      if(!(lss>>tmpFloat)){
-	endOfLine = true;
-      }
-      if(!endOfLine){
-	std::istringstream iss(tmpFloat);
-	std::string token;
-	getline(iss,token,':');  // centre i
-	int index = atoi(token.c_str());
-	// if the index is greater than the precedent center
-	// it is normal else there is an error
-	if(index > (center + 1) - 1){
-	  while(center + 1 != index){
-	    bowTab[center] = .0;
-	    center++;
-	  }
-	  getline(iss,token,':');  // value i
-	  bowTab[center] = atof(token.c_str());
-	  center++;
-	}
-	else 
-	  endOfLine = true;
-      }
-    }
-    // Si les derniers centres sont égaux à 0 et qu'ils ne sont pas précisés
-    while(center < k){
-      bowTab[center] = .0;
-      center++;
-    }
-    
-    int notZero = 0;
-    center = 0;
-    while(center < k){
-      if(bowTab[center] != 0){
-	notZero++;
-      }
-      center++;
-    }
-    int i = 0;
-    svmProblem.x[idActivity] = (svm_node *) malloc((notZero + 1) * sizeof(svm_node));
-    center = 0;
-    while(center < k){
-      if(bowTab[center] != .0){
-	svmProblem.x[idActivity][i].index = center + 1;
-	svmProblem.x[idActivity][i].value = bowTab[center];
-	i++;
-      }
-      center++;
-    }
-    svmProblem.x[idActivity][(notZero-1)+1].index = -1;
-    // c'est la fin du tableau pas besoin d'ajouer une valeur
-    idActivity++;
-  }
-  in.close();
-  delete[] bowTab;
-  return svmProblem;
-}
-
-/**
- * \fn exportProblem(struct svm_problem svmProblem, std::string file)
- * \brief SVM Exporting function. It writes in a file in the following format:
- * label 1:value 2:value 3:value (each lines).
- *
- * \param[in] svmProblem The SVM problem to export.
- * \param[out] file The file which will contain the Bag Of Words.
- */
-void exportProblem(struct svm_problem svmProblem, std::string file){
-  int l = svmProblem.l;  
-  ofstream bowFile(file.c_str(), ios::out | ios::trunc);  // ouverture en écriture avec effacement du fichier ouvert
-  if(!bowFile){
-   std::cerr << "Cannot open the file!" << std::endl;
-   exit(EXIT_FAILURE);
-  }
-  int idActivity = 0;
-  while(idActivity < l){
-    bowFile << svmProblem.y[idActivity];
-    int i = 0;
-    while(svmProblem.x[idActivity][i].index != -1){
-      bowFile << " " << svmProblem.x[idActivity][i].index << ":" << svmProblem.x[idActivity][i].value;
-      i++;
-    }
-    bowFile << std::endl;
-    idActivity++;
-  }
-}
-
-/**
- * \fn exportProblemZero(struct svm_problem svmProblem, std::string file, int k)
- * \brief SVM Exporting function. It writes in a file in the following format:
- * label 1:value 2:value 3:value (each lines). It is different of exportProblem
- * because it writes the null values.
- *
- * \param[in] svmProblem The SVM problem to export.
- * \param[out] file The file which will contain the Bag Of Words.
- * \param[in] The dimension of the STIPs.
- */
-void exportProblemZero(struct svm_problem svmProblem, std::string file, int k){
-  int l = svmProblem.l;  
-  ofstream bowFile(file.c_str(), ios::out | ios::trunc);  // ouverture en écriture avec effacement du fichier ouvert
-  if(!bowFile){
-   std::cerr << "Cannot open the file!" << std::endl;
-   exit(EXIT_FAILURE);
-  }
-  int idActivity = 0;
-  while(idActivity < l){
-    bowFile << svmProblem.y[idActivity];
-    int i = 0;
-    int center =  0;
-    while(svmProblem.x[idActivity][i].index != -1){
-      int index = svmProblem.x[idActivity][i].index;
-      while(center+1<index){
-	bowFile << " " << center + 1 << ":" << 0.0;
-	center++;
-      }
-      bowFile << " " << index << ":" << svmProblem.x[idActivity][i].value;
-      i++;
-      center++;
-    }
-    while(center<k){
-      bowFile << " " << center + 1 << ":" << 0.0;
-      center++;
-    }
-    bowFile << std::endl;
-    idActivity++;
-  }
-}
+#include <math.h>
 
 /**
  * \fn struct svm_problem computeBOW(int label, const KMdata& dataPts, KMfilterCenters& ctrs)
@@ -185,7 +20,7 @@ void exportProblemZero(struct svm_problem svmProblem, std::string file, int k){
 struct svm_problem computeBOW(int label, const KMdata& dataPts, KMfilterCenters& ctrs){
   int k = ctrs.getK();
   int nPts = dataPts.getNPts();
-
+  
   // 1. Getting assignments 
   KMctrIdxArray closeCtr = new KMctrIdx[dataPts.getNPts()]; // dataPts = 1 label
   double* sqDist = new double[dataPts.getNPts()];
@@ -196,33 +31,28 @@ struct svm_problem computeBOW(int label, const KMdata& dataPts, KMfilterCenters&
   bowHistogram = new float[k];
   for(int centre = 0; centre<k; centre++)
     bowHistogram[centre]=0;
+  
   // 3. Filling histogram
   for(int point = 0; point < nPts ; point++){
     bowHistogram[closeCtr[point]]++;
   }
-  // 4. Dividing by the number of points (YOU CAN DELETE THIS PART IF YOU WANT)
-  for(int centre = 0 ; centre < k ; centre++){
-    bowHistogram[centre] /= nPts;
-  }
-  delete closeCtr;
+  delete[] closeCtr;
   delete[] sqDist;
   
   // 5. Exporting the BOW in the structure svmProblem
   struct svm_problem svmProblem;
-  int l = 1;
+  int l=1;
   svmProblem.l = l;
   svmProblem.y = (double*) malloc(svmProblem.l * sizeof(double));
   svmProblem.x = (struct svm_node **) malloc(svmProblem.l * sizeof(struct svm_node *));
-  
   int idActivity = 0;
   while(idActivity < l){
     svmProblem.y[idActivity] = label;
     int notZero = 0;
     int center = 0;
     while(center < k){
-      if(bowHistogram[center] != 0){
-	notZero++;
-      }
+      if(bowHistogram[center] != 0)
+    	notZero++;
       center++;
     }
     int i = 0;
@@ -230,9 +60,9 @@ struct svm_problem computeBOW(int label, const KMdata& dataPts, KMfilterCenters&
     center = 0;
     while(center < k){
       if(bowHistogram[center] != .0){
-	svmProblem.x[idActivity][i].index = center + 1;
-	svmProblem.x[idActivity][i].value = bowHistogram[center];
-	i++;
+    	svmProblem.x[idActivity][i].index = center + 1;
+     	svmProblem.x[idActivity][i].value = bowHistogram[center];
+    	i++;
       }
       center++;
     }
@@ -240,189 +70,20 @@ struct svm_problem computeBOW(int label, const KMdata& dataPts, KMfilterCenters&
     // It is the end of the table we do not need to add a value
     idActivity++;
   }
-  delete bowHistogram;
-
+  delete[] bowHistogram;
+  
   return svmProblem; 
 }
-/**
- * \fn void printProblem(struct svm_problem svmProblem)
- * \brief It permits to print the SVM problem in the standard output.
- *
- * \param[in] svmProblem It is the structure containing the SVM problem.
- */
-void printProblem(struct svm_problem svmProblem){
-  int nbActivities = svmProblem.l;
-  double* labels = svmProblem.y;
-  struct svm_node** centers =svmProblem.x;
-  
-  cout << "l = " << nbActivities << endl;
-  cout << "y -> ";
-  for(int idActivity = 0 ; idActivity<nbActivities ; idActivity++){
-    cout << labels[idActivity] << " ";
-  }
-  cout << endl;
-  cout << "x -> ";
-  
-  for(int idActivity = 0 ; idActivity<nbActivities ; idActivity++){
-    if(idActivity == 0)
-      cout << "[ ] -> ";
-    else
-      cout << "     " << "[ ] -> ";
-    int idCenter = 0;
-    int index;
-    while((index = centers[idActivity][idCenter].index) != -1){
-      double value = centers[idActivity][idCenter].value;
-      cout <<  "(" << index << "," << value << ")" << " ";
-      idCenter++;
-    }
-    cout << "(" << index << ",?)" << endl;
-  }
-  
-}
 
 /**
- * \fn int nrOfLines(std::string filename)
- * \brief A function returning the number of lines (which correspond to the number of activities)
- *
- * \param[in] fileName The file we want to count the number of lines.
- * \return The number of lines of the file.
- */
-int nrOfLines(std::string filename){
-  std::ifstream fichier(filename.c_str());
-  if(!fichier){
-    std::cout << "Ne peut ouvrir " << filename << std::endl;
-    exit(EXIT_FAILURE);
-  }
-  
-  std::string s;
-  unsigned int count = 0;
-  while(std::getline(fichier,s)) ++count;
-  fichier.close();
-  
-  return count;
-}
-
-/**
- * \fn void printProbability(struct svm_model* pModel, struct svm_node* nodes)
- * \brief Print for each labels the probability of the activity (stored in the SVM node structure).
- *
- * \param[in] pModel A pointer to the SVM model.
- * \param[in] nodes The activity stored in SVM nodes.
- */
-void printProbability(struct svm_model* pModel, struct svm_node* nodes){
-  if(svm_check_probability_model(pModel) != 1){
-    cerr << "The model does not contain required information to do probability estimates." << endl;
-    exit(EXIT_FAILURE);
-  }
-  double *prob_estimates;
-  int nrClass = pModel->nr_class;
-  prob_estimates = (double *) malloc(pModel->nr_class * sizeof(double));
-  double label;
-  label = svm_predict_probability(pModel, nodes, prob_estimates); 
-  cout << "Class\t";
-  for(int i = 0 ; i<nrClass ; i++){
-    int index = pModel->label[i];
-    cout << index << "\t"; 
-  }
-  cout << endl;
-  cout << label << "\t" ;
-  for(int i = 0 ; i<nrClass ; i++){
-    cout << prob_estimates[i] << "\t"; 
-  }
-  cout << endl;
-}
-
-/* PROBLEM WITH THIS FUNCTION
-struct svm_node* importNodes(char* file){
-  struct svm_node *svmNode = NULL;
-  
-  float bowTab[NB_MEANS];
-  int label;
-  
-  std::ifstream in(file,ios::in);
-  if(!in){
-    cerr << "Can't open the file to test !" << endl;
-    exit(EXIT_FAILURE);
-  }
-  // On remet à 0 le tableau bowTab
-  for(int i = 0 ; i < NB_MEANS ; i++){
-    bowTab[i] = .0;
-  }
-  in >> label;
-  
-  int center = 0;
-  bool endOfLine = false;
-  while(!endOfLine && center < NB_MEANS){
-    std::string tmpFloat;
-    if(!(in>>tmpFloat)){
-      endOfLine = true;
-    }
-    if(!endOfLine){
-      std::istringstream iss(tmpFloat);
-      std::string token;
-      getline(iss,token,':');  // centre i
-      while(atoi(token.c_str()) != center + 1){
-	bowTab[center] = .0;
-	center++;
-      }
-      getline(iss,token,':');  // value i
-      bowTab[center] = atof(token.c_str());
-      center++;
-    }
-  }
-  // Si les derniers centres sont égaux à 0 et qu'ils ne sont pas précisés
-  while(center < NB_MEANS){
-    bowTab[center] = .0;
-    center++;
-  }
-  
-  int notZero = 0;
-  center = 0;
-  while(center < NB_MEANS){
-    if(bowTab[center] != 0){
-      notZero++;
-    }
-    center++;
-  }
-  
-  int i = 0;
-  svmNode = (svm_node *) malloc((notZero + 1) * sizeof(svm_node));
-  center = 0;
-  while(center < NB_MEANS){
-    if(bowTab[center] != .0){
-	svmNode[i].index = center + 1;
-	svmNode[i].value = bowTab[center];
-	i++;
-    }
-    center++;
-  }
-  svmNode[(notZero-1)+1].index = -1;
-  in.close();
-  return svmNode;
-}*/
-/*
-void printNodes(struct svm_node* nodes){
-  cout << "x -> ";
-  cout << "[ ] -> ";
-  int idCenter = 0;
-  int index;
-  while((index = nodes[idCenter].index) != -1){
-    double value = nodes[idCenter].value;
-    cout <<  "(" << index << "," << value << ")" << " ";
-    idCenter++;
-  }
-  cout << "(" << index << ",?)" << endl;
-  }*/
-
-/**
- * \fn struct svm_model* createSvmModel(std::string bowFile, int k)
+ * \fn struct svm_model* create_svm_model(std::string bowFile, int k)
  * \brief Create the SVM model of the activities present in a file.
  *
  * \param[in] bowFile The name of the file containing the BOWs.
  * \param[in] k The number of clusters (dimension of a BOW).
  * \return The SVM model.
  */
-struct svm_model* createSvmModel(std::string bowFile, int k){
+struct svm_model* create_svm_model(int k, struct svm_problem svmProblem){
   // SVM PARAMETER
   struct svm_parameter svmParameter;
   svmParameter.svm_type = C_SVC;
@@ -434,7 +95,7 @@ struct svm_model* createSvmModel(std::string bowFile, int k){
   /* For training only : */
   svmParameter.cache_size = 100; // in MB
   svmParameter.eps = 1e-3; // stopping criteria
-  svmParameter.C = 1;
+  svmParameter.C = 35; // default = 1
   
   // change the penalty for some classes
   svmParameter.nr_weight = 0;
@@ -447,14 +108,421 @@ struct svm_model* createSvmModel(std::string bowFile, int k){
   svmParameter.shrinking = 1;	/* use the shrinking heuristics */
   svmParameter.probability = 0; /* do probability estimates */
   
-  //  cross_validation = 0;
+  return svm_train(&svmProblem,&svmParameter);
+}
+void bow_gaussian_normalization(int k,
+				double* means,
+				double* stand_devia,
+				struct svm_problem &svmProblem
+				){
+  struct svm_node* node = NULL;
+  for(int a=0 ; a<svmProblem.l ; a++){
+    node = svmProblem.x[a];
+    int i = 0;
+    while(node[i].index != -1){
+      int index = node[i].index - 1;
+      int value = node[i].value;
+      node[i].value = (value-means[index])/stand_devia[index];
+      i ++;
+    }
+  }
+}
+
+/**
+ * the definitions of class MatrixC
+ */
+MatrixC::MatrixC(int nr_class, int* labels){
+  int n = this->num_labels = nr_class;
+  this->labels = new double[n];
+  for(int i=0; i<n; i++){
+    this->labels[i] = labels[i];
+  }
+  this->m = new int*[n];
+  for(int i=0; i<n; i++){
+    this->m[i] = new int[n];
+  }
+  this->m_fre = new double*[n];
+  for(int i=0; i<n; i++){
+    this->m_fre[i] = new double[n];
+  }
+  for(int i=0; i<n; i++){
+    for(int j=0; j<n; j++){
+      this->m[i][j] = 0;
+      this->m_fre[i][j] = .0;
+    }
+  }
   
-  // SVM PROBLEM
-  cout << "Importing the problem..." << std::endl;
-  struct svm_problem svmProblem = importProblem(bowFile,k);
-  struct svm_model* svmModel = svm_train(&svmProblem,&svmParameter);
-  free(svmProblem.x);
+  this->nrTest = 0;
+  this->nrRecognition = 0;
+}
+MatrixC::MatrixC(const svm_model* model){
+  int n = this->num_labels = model->nr_class;
+  this->labels = new double[n];
+  for(int i=0; i<n; i++){
+    this->labels[i] = model->label[i];
+  }
+  this->m = new int*[n];
+  for(int i=0; i<n; i++){
+    this->m[i] = new int[n];
+  }
+  this->m_fre = new double*[n];
+  for(int i=0; i<n; i++){
+    this->m_fre[i] = new double[n];
+  }
+  for(int i=0; i<n; i++){
+    for(int j=0; j<n; j++){
+      this->m[i][j] = 0;
+      this->m_fre[i][j] = .0;
+    }
+  }
+  
+  this->nrTest = 0;
+  this->nrRecognition = 0;
+}
+MatrixC::~MatrixC(){
+  delete [] this->labels;
+  for(int i=0; i<this->num_labels; i++){
+    delete [] this->m[i];
+    delete [] this->m_fre[i];
+  }
+  delete [] this->m;
+  delete [] this->m_fre;
+}
+int MatrixC::getIndex(double lab){
+  for(int i=0; i<this->num_labels; i++){
+    if(this->labels[i] == lab){
+      return i;
+    }
+  }
+  return -1;
+}
+void MatrixC::addTransfer(double lab_in,double lab_out){
+  int index_in = this->getIndex(lab_in);
+  int index_out = this->getIndex(lab_out);
+  this->m[index_in][index_out]++;
+  if(lab_in == lab_out) this->nrRecognition++;
+  this->nrTest++;
+}
+void MatrixC::calculFrequence(){
+  int num = this->num_labels;
+  for(int i=0; i<num; i++){
+    int total = 0;
+    for(int j=0; j<num; j++){
+      total += this->m[i][j];
+    }
+    for(int j=0; j<num; j++){
+      this->m_fre[i][j] = (double)this->m[i][j]/(double)total;
+    }
+  }
+  this->recognitionRate = (double)this->nrRecognition / (double)this->nrTest;  
+}
+
+double** MatrixC::getMatrix(){return this->m_fre;}
+
+void MatrixC::output(){
+  using namespace std;
+  int num = this->num_labels;
+  cout<<"===Confusion Matrix==="<<endl;
+  cout<<setw(6)<<' ';
+  for(int i=0;i<num;i++){
+    cout<<setw(6)<<setiosflags(ios::fixed)<<setprecision(0)<<this->labels[i];
+  }
+  cout<<endl;
+  for(int i=0;i<num;i++){
+    cout<<setw(6)<<setiosflags(ios::fixed)<<setprecision(0)<<this->labels[i];
+    for(int j=0;j<num;j++){
+      cout<<setw(6)<<setprecision(2)<<this->m_fre[i][j];
+    }
+    cout<<endl;
+  }
+  cout<<"===END Confusion Matrix==="<<endl;
+}
+
+void MatrixC::exportMC(std::string folder, std::string file){
+  std::string MCfile(folder + "/" + file);
+  // Ouverture en écriture avec effacement du fichier ouvert
+  ofstream out(MCfile.c_str(), ios::out | ios::trunc);  
+  int num = this->num_labels;
+  for(int i=0;i<num;i++){
+    for(int j=0;j<num;j++){
+      out<<setw(7)<< setprecision(2)<< this->m_fre[i][j];
+    }
+    out<<endl;
+  }
+  out<<endl<<endl;
+  for(int i=0;i<num;i++){
+    for(int j=0;j<num;j++){
+      out<<setw(7)<< this->m[i][j];
+    }
+    out<<endl;
+  }
+}
+
+void bow_simple_normalization(struct svm_problem& svmProblem){
+  int nrBows = svmProblem.l;
+  int i;
+  double sum;
+  for(int l=0 ; l<nrBows ; l++){
+    i=0;
+    
+    sum = 0;
+    while((svmProblem.x[l])[i].index != -1){
+      sum += (svmProblem.x[l])[i].value;
+      i++;
+    }
+    
+    i=0;
+    while((svmProblem.x[l])[i].index != -1){
+      (svmProblem.x[l])[i].value /= sum;
+      i++;
+    }
+  }
+}
+
+void destroy_svm_problem(struct svm_problem svmProblem){
   free(svmProblem.y);
+  //svmProblem.y = NULL;
   
-  return svmModel;
+  for(int a=0 ; a<svmProblem.l ; a++){
+    free(svmProblem.x[a]);
+    //svmProblem.x[a] = NULL;
+  }
+  free(svmProblem.x);
+  //svmProblem.x = NULL;
+}
+
+// Add only one BOW
+void addBOW(struct svm_node* bow, double label,
+	    struct svm_problem& svmProblem){
+  int maxl = 1000;
+  int maxdim = 500;
+  if(svmProblem.y==NULL || svmProblem.x==NULL){
+    //cerr << "Huilong" << endl;
+    svmProblem.y=(double*)malloc(maxl*sizeof(double));
+    svmProblem.x=(struct svm_node**)malloc(maxl*sizeof(struct svm_node*));
+    if(svmProblem.y==NULL || svmProblem.x==NULL){
+      std::cerr << "Malloc error of svmProblem.x and svmProblem.y!" << std::endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+  svmProblem.y[svmProblem.l] = label;
+  int d=0;
+  while(bow[d].index != -1){
+    if(d==0&&(svmProblem.x[svmProblem.l]=(struct svm_node*) malloc(maxdim*sizeof(struct svm_node))) == NULL){
+      std::cerr << "Malloc error of svmProblem.x[svmProblem.l]!" << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    svmProblem.x[svmProblem.l][d].index = bow[d].index;
+    svmProblem.x[svmProblem.l][d].value = bow[d].value;
+    d++;
+  }
+  svmProblem.x[svmProblem.l][d].index = -1;
+  svmProblem.l++;
+}
+
+void get_gaussian_parameters(int k,
+			     struct svm_problem svmProblem,
+			     double* means,
+			     double* stand_devia){
+  struct svm_node** nodes = svmProblem.x;
+  //double* labels = svmProblem.y;
+  int num_nodes = svmProblem.l;
+  int pointers[num_nodes];
+  for(int i=0; i<num_nodes; i++)
+    pointers[i] = 0;
+  for(int i=0; i<k; i++){
+    double components[num_nodes]; 
+    double total = 0;
+    for(int j=0; j<num_nodes; j++){
+      struct svm_node* node = nodes[j];
+      components[j] = 0;
+      int pointer = pointers[j];
+      int index = node[pointer].index;
+      if(i+1 == index){
+        components[j] = node[pointer].value;
+        pointers[j] ++;
+      }
+      total += components[j];
+    }
+    means[i] = total/num_nodes;
+    double var = 0;
+    for(int j=0; j<num_nodes; j++){
+      var += (components[j]-means[i])*(components[j]-means[i]);
+    }
+    var /= num_nodes;
+    stand_devia[i] = sqrt(var);  
+  }
+}
+void save_gaussian_parameters(const IMbdd& bdd,
+			      double* means,
+			      double* stand_devia){
+  // Save the gaussian parameters
+  std::string meansPath(bdd.getFolder() + "/" + bdd.getMeansFile());
+  std::string standPath(bdd.getFolder() + "/" + bdd.getStandardDeviationFile());
+  std::cout << meansPath << std::endl << standPath << std::endl;
+  std::ofstream outmean(meansPath.c_str());
+  std::ofstream outstand(standPath.c_str());
+  //std::cout << meansPath << " " << standPath << std::endl;
+  for(int i=0 ; i<bdd.getK() ; i++){
+    outmean<<means[i]<<std::endl;
+    outstand<<stand_devia[i]<<std::endl;
+  }
+}
+
+void load_gaussian_parameters(const IMbdd& bdd, 
+			      double* means,
+			      double* stand_devia){
+  std::string meansPath(bdd.getFolder() + "/" + bdd.getMeansFile());
+  std::string standPath(bdd.getFolder() + "/" + bdd.getStandardDeviationFile());
+  std::ifstream inmean(meansPath.c_str());
+  std::ifstream instand(standPath.c_str());
+  std::cout << meansPath << " " << standPath << std::endl;
+  for(int i=0; i<bdd.getK() ; i++){
+    inmean >> (means)[i];
+    instand >> (stand_devia)[i];
+  }
+}
+
+// svm training funciton using the strategy one-vs-rest
+svm_model **svm_train_ovr(const svm_problem *prob, svm_parameter *param){
+  int nr_class;
+  vector<double> label;
+  label = get_labels_from_prob(prob);
+  nr_class = label.size();
+  int l = prob->l;
+  svm_model **model = new svm_model*[nr_class];
+  if(nr_class == 1){
+    std::cerr<<"Training data in only one class. Aborting!"<<std::endl;
+    exit(EXIT_FAILURE);
+  }
+  double *temp_y = new double[l];
+  param->weight = new double[2];
+  param->weight_label = new int[2];
+  for(int i=0;i<nr_class;i++){
+    double label_class = label[i];
+    for(int j=0;j<l;j++) temp_y[j] = prob->y[j];
+    param->nr_weight = 2;
+    param->weight_label[1] = ceil(label_class);
+    param->weight_label[0] = 0;
+    param->weight[0] = param->weight[1] = 0;
+    for(int j=0;j<l;j++){
+      if(label_class != prob->y[j]){
+        prob->y[j] = 0;
+        param->weight[0] += 1;
+      }
+      else{
+        param->weight[1] += 1;
+      }
+    }
+    param->weight[0] = 1/sqrt(param->weight[0]);
+    param->weight[1] = 1/sqrt(param->weight[1]);
+    model[i] = svm_train(prob,param);
+    for(int j=0;j<l;j++) prob->y[j] =  temp_y[j];
+  }
+  delete [] temp_y;
+  delete [] param->weight;
+  delete [] param->weight_label;
+  return model;
+}
+
+// svm predictor using the one-vs-rest strategy returning the probilities
+double svm_predict_ovr_probs(svm_model** models, const svm_node* x,int nbr_class, double* probs, double lamda){
+  if(lamda <= 0){
+    std::cerr<<"ERROR: svm_predict_ovr_probs(): lamda must be positive!"<<std::endl;
+    exit(EXIT_FAILURE);
+  }
+  double *decvs = new double[nbr_class];
+  double *labels = new double[nbr_class];
+  double totalExpDecv = 0;
+  for(int i=0;i<nbr_class;i++){
+    labels[i] = models[i]->label[0]+models[i]->label[1];
+    double label_pred = svm_predict_values(models[i],x,&(decvs[i])); 
+
+    if(decvs[i]<0 && label_pred>0)
+      decvs[i] = -decvs[i];
+    if(decvs[i]>0 && label_pred<=0)
+      decvs[i] = -decvs[i];
+    
+    probs[i] = exp(lamda*decvs[i]);
+    totalExpDecv += probs[i];
+  }
+  for(int i=0;i<nbr_class;i++){
+    probs[i] = probs[i]/totalExpDecv;
+  }
+  double maxvalue = decvs[0];
+  double label = labels[0];
+  for(int i=1;i<nbr_class;i++){
+    if(decvs[i]>maxvalue){
+      maxvalue = decvs[i];
+      label = labels[i];
+    }
+  }
+  delete [] decvs;
+  delete [] labels;
+  return label;
+}
+
+//print ovr label:prob
+void svm_ovr_print(double *labels, double *probs, int nbr_class){
+  using namespace std;
+  cerr<<"Ovr labels and probabilities:"<<endl;
+  for(int i=0;i<nbr_class;i++){
+    cerr<<setiosflags(ios::fixed)<<labels[i]<<":"<<probs[i]<<" ";
+  }
+  cerr<<endl;
+  return;
+}
+
+void get_svm_parameter(int k,struct svm_parameter &svmParameter, std::string kernel){
+  const char* kernel_type[]=
+  {
+  	"linear","polynomial","rbf","sigmoid","chis","rbfchis","inters","precomputed",NULL
+  };
+  int i;
+  for(i=0;kernel_type[i];i++){
+    if(strcmp(kernel_type[i],kernel.c_str())==0){
+      svmParameter.kernel_type=i;
+      break;
+    }
+  }
+  if(kernel_type[i] == NULL){
+    std::cerr << "Unexpected SVM kernel, using chi-square kernel..." << std::endl;
+    svmParameter.kernel_type=CHIS;
+  }
+  if(kernel == "rbfchis"){
+    // Find a better A by cross validation 
+    svmParameter.rbfchisA = 230;
+  }
+  svmParameter.svm_type = C_SVC;
+  svmParameter.gamma = 1.0/k;
+  svmParameter.cache_size = 100; // in MB
+  svmParameter.eps = 1e-3; // stopping criteria
+  svmParameter.C = 1;
+  // Change the penalty for some classes
+  svmParameter.nr_weight = 0;
+  svmParameter.weight_label = NULL;
+  svmParameter.weight = NULL;
+  // Use the shrinking heuristics 
+  svmParameter.shrinking = 1;	
+  // Probability estimates
+  svmParameter.probability = 0;
+}
+
+std::vector<double> get_labels_from_prob(const svm_problem *prob){
+  int l = prob->l;
+  double *y = prob->y;
+  vector<double> labels;
+  for(int i=0; i<l; i++){
+    bool exist = false;
+    for(std::vector<double>::iterator itr = labels.begin(); itr != labels.end();itr++){
+      if(y[i] == *itr){
+        exist = true;
+        break;
+      }
+    }
+    if(!exist){
+      labels.push_back(y[i]);
+    }
+  }
+  return labels;
 }

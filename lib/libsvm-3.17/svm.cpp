@@ -8,6 +8,9 @@
 #include <limits.h>
 #include <locale.h>
 #include "svm.h"
+#include <iostream>
+#include <time.h>
+
 int libsvm_version = LIBSVM_VERSION;
 typedef float Qfloat;
 typedef signed char schar;
@@ -44,7 +47,7 @@ static void print_string_stdout(const char *s)
 	fflush(stdout);
 }
 static void (*svm_print_string) (const char *) = &print_string_stdout;
-#if 1
+#if 0
 static void info(const char *fmt,...)
 {
 	char buf[BUFSIZ];
@@ -226,8 +229,12 @@ private:
 	const int degree;
 	const double gamma;
 	const double coef0;
+  const double rbfchisA;//parameter A of rbf chi-square kernel
 
 	static double dot(const svm_node *px, const svm_node *py);
+  static double chis(const svm_node *px, const svm_node *py);
+  static double inters(const svm_node *px, const svm_node *py);
+  static double chi_square_distance(const svm_node *px, const svm_node *py);
 	double kernel_linear(int i, int j) const
 	{
 		return dot(x[i],x[j]);
@@ -244,6 +251,22 @@ private:
 	{
 		return tanh(gamma*dot(x[i],x[j])+coef0);
 	}
+  double kernel_chis(int i, int j) const
+  {
+    return chis(x[i],x[j]);
+  }
+  double kernel_rbfchis(int i,int j) const
+  {
+    double v = exp(-1.0*chi_square_distance(x[i],x[j])/rbfchisA);
+    //sleep(1);
+    //std::cout << "Chi2 distance: " << chi_square_distance(x[i],x[j])<< std::endl;
+    //std::cout << "kernel_rbfchis: Kernel value: " << v << std::endl;
+    return v;
+  }
+  double kernel_intersection(int i, int j) const
+  {
+    return inters(x[i],x[j]);
+  }
 	double kernel_precomputed(int i, int j) const
 	{
 		return x[i][(int)(x[j][0].value)].value;
@@ -252,7 +275,7 @@ private:
 
 Kernel::Kernel(int l, svm_node * const * x_, const svm_parameter& param)
 :kernel_type(param.kernel_type), degree(param.degree),
- gamma(param.gamma), coef0(param.coef0)
+ gamma(param.gamma), coef0(param.coef0), rbfchisA(param.rbfchisA)
 {
 	switch(kernel_type)
 	{
@@ -268,6 +291,15 @@ Kernel::Kernel(int l, svm_node * const * x_, const svm_parameter& param)
 		case SIGMOID:
 			kernel_function = &Kernel::kernel_sigmoid;
 			break;
+    case CHIS:
+      kernel_function = &Kernel::kernel_chis;
+      break;
+    case RBFCHIS:
+      kernel_function = &Kernel::kernel_rbfchis;
+      break;
+    case INTERS: //histogram intersection kernel
+      kernel_function = &Kernel::kernel_intersection;
+      break;
 		case PRECOMPUTED:
 			kernel_function = &Kernel::kernel_precomputed;
 			break;
@@ -312,6 +344,78 @@ double Kernel::dot(const svm_node *px, const svm_node *py)
 	}
 	return sum;
 }
+
+double Kernel::chis(const svm_node *px, const svm_node *py){
+	double sum = 0;
+	while(px->index != -1 && py->index != -1)
+	{
+		if(px->index == py->index)
+		{
+			sum += px->value * py->value / (px->value + py->value); 
+			++px;
+			++py;
+		}
+		else
+		{
+			if(px->index > py->index)
+				++py;
+			else
+				++px;
+		}			
+	}
+	return 2*sum;
+  //return 1.0-Kernel::chi_square_distance(px,py);
+}
+
+double Kernel::inters(const svm_node *px, const svm_node *py){
+	double sum = 0;
+	while(px->index != -1 && py->index != -1)
+	{
+		if(px->index == py->index)
+		{
+			sum += (px->value < py->value) ? px->value : py->value; 
+			++px;
+			++py;
+		}
+		else
+		{
+			if(px->index > py->index)
+				++py;
+			else
+				++px;
+		}			
+	}
+	return sum;
+}
+
+double Kernel::chi_square_distance(const svm_node *px, const svm_node *py){
+	double sum = 0;
+	while(px->index != -1 && py->index != -1)
+	{
+    //std::cout << "x:index: "<< px->index << " x:value: " << px->value << " y:index: " << py->index << " y:value: " << py->value << std::endl; 
+		if(px->index == py->index)
+		{
+			sum += (px->value - py->value)*(px->value - py->value) / (px->value + py->value);
+			++px;
+			++py;
+		}
+		else
+		{
+			if(px->index > py->index){
+        sum += py->value;
+				++py;
+      }
+			else{
+        sum += px->value;
+				++px;
+      }
+		}	
+    //std::cout << "sum :: " << sum << std::endl;
+	}
+  sum /= 2;//now sum is the chi-square distance between px and py
+  return sum;
+}
+
 
 double Kernel::k_function(const svm_node *x, const svm_node *y,
 			  const svm_parameter& param)
@@ -365,6 +469,16 @@ double Kernel::k_function(const svm_node *x, const svm_node *y,
 		}
 		case SIGMOID:
 			return tanh(param.gamma*dot(x,y)+param.coef0);
+    case CHIS:
+      return chis(x,y);
+    case RBFCHIS:
+      {  
+        double v = exp(-1.0*chi_square_distance(x,y)/param.rbfchisA);
+        //std::cout << "RBFCHIS: Kernel value: " << v << std::endl;
+        return v;
+      }
+    case INTERS:
+      return inters(x,y);
 		case PRECOMPUTED:  //x: test (validation), y: SV
 			return x[(int)(y->value)].value;
 		default:
@@ -2130,7 +2244,7 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 		for(i=0;i<prob->l;i++)
 			if(fabs(f.alpha[i]) > 0)
 			{
-				model->SV[j] = prob->x[i];
+				model->SV[j] = prob->x[i];// that's why we can't free the prob before saving the model!!
 				model->sv_coef[0][j] = f.alpha[i];
 				model->sv_indices[j] = i+1;
 				++j;
@@ -2498,6 +2612,11 @@ double svm_get_svr_probability(const svm_model *model)
 	}
 }
 
+static const char *kernel_type_table[]=
+{
+	"linear","polynomial","rbf","sigmoid","chis","rbfchis","inters","precomputed",NULL
+};
+
 double svm_predict_values(const svm_model *model, const svm_node *x, double* dec_values)
 {
 	int i;
@@ -2522,6 +2641,7 @@ double svm_predict_values(const svm_model *model, const svm_node *x, double* dec
 		int nr_class = model->nr_class;
 		int l = model->l;
 		
+	  //fprintf(stdout,"kernel_type %s\n", kernel_type_table[model->param.kernel_type]);
 		double *kvalue = Malloc(double,l);
 		for(i=0;i<l;i++)
 			kvalue[i] = Kernel::k_function(x,model->SV[i],model->param);
@@ -2633,10 +2753,6 @@ static const char *svm_type_table[] =
 	"c_svc","nu_svc","one_class","epsilon_svr","nu_svr",NULL
 };
 
-static const char *kernel_type_table[]=
-{
-	"linear","polynomial","rbf","sigmoid","precomputed",NULL
-};
 
 int svm_save_model(const char *model_file_name, const svm_model *model)
 {
@@ -2659,6 +2775,9 @@ int svm_save_model(const char *model_file_name, const svm_model *model)
 
 	if(param.kernel_type == POLY || param.kernel_type == SIGMOID)
 		fprintf(fp,"coef0 %g\n", param.coef0);
+
+  if(param.kernel_type == RBFCHIS)
+    fprintf(fp,"rbfchisA %g\n", param.rbfchisA);
 
 	int nr_class = model->nr_class;
 	int l = model->l;
@@ -2833,6 +2952,8 @@ svm_model *svm_load_model(const char *model_file_name)
 			fscanf(fp,"%lf",&param.gamma);
 		else if(strcmp(cmd,"coef0")==0)
 			fscanf(fp,"%lf",&param.coef0);
+    else if(strcmp(cmd,"rbfchisA")==0)
+      fscanf(fp,"%lf",&param.rbfchisA);
 		else if(strcmp(cmd,"nr_class")==0)
 			fscanf(fp,"%d",&model->nr_class);
 		else if(strcmp(cmd,"total_sv")==0)
@@ -3039,6 +3160,9 @@ const char *svm_check_parameter(const svm_problem *prob, const svm_parameter *pa
 	   kernel_type != POLY &&
 	   kernel_type != RBF &&
 	   kernel_type != SIGMOID &&
+     kernel_type != CHIS&&
+     kernel_type != RBFCHIS&&
+     kernel_type != INTERS&&
 	   kernel_type != PRECOMPUTED)
 		return "unknown kernel type";
 

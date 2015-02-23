@@ -1,9 +1,0 @@
-<map id="G" name="G">
-<area shape="rect" href="$naokmeans_8cpp.html#a42663cf0eaef4fbe479f6c031eaf4e99" title="Import HOG and HOF from a file and compute KMeans algorithm to create the file training..." alt="" coords="123,59,264,88"/>
-<area shape="rect" href="$naokmeans_8cpp.html#a4a594810a9a736a792e6b2571dfc2170" title="STIPs importation function in the format 1 point = 1 line. Each dimension are separated..." alt="" coords="325,112,419,141"/>
-<area shape="rect" href="$naokmeans_8cpp.html#ab24dc2206c891d1c5644ba930daa6e74" title="Importation function saving external centers in the KMfilterCenters object. One line..." alt="" coords="143,163,244,192"/>
-<area shape="rect" href="$naomngt_8cpp.html#a4c824549da3499de85aa15a2d3617b19" title="Converts an int into a string." alt="" coords="155,216,232,245"/>
-<area shape="rect" href="$naomngt_8cpp.html#ae4d78aa9a888ef3787ea06e1246f7ee0" title="Fills the object activitiesMap which contain the equivalence Label&#45;Activity." alt="" coords="144,269,243,299"/>
-<area shape="rect" href="$naokmeans_8cpp.html#a70fee2c407d3bf32b07943b8cfcb3c7e" title="Export function to save KMfilterCenters in a file. One line corresponds to one point..." alt="" coords="321,5,423,35"/>
-<area shape="rect" href="$naokmeans_8cpp.html#a1239738af8b88f74abba7ca22baaf46c" title="This is an optimized KMeans algorithm. Ivan&#39;s algorithm uses basic KMeans algorithm..." alt="" coords="312,59,432,88"/>
-</map>

@@ -10,6 +10,7 @@
 #include <string.h>			// C++ strings
 #include <fstream>
 #include "KMlocal.h"			// k-means algorithms
+#include "naomngt.h"
 
 using namespace std;		
 
@@ -23,4 +24,5 @@ void createTrainingMeans(std::string stipFile,
 			 int maxPts,
 			 int k,
 			 std::string meansFile);
+
 #endif
