@@ -33,10 +33,10 @@ For the moment the activities had to be recorded in a 2-second video (our video 
 ## Sources:
 * SVM: [http://www.csie.ntu.edu.tw/~cjlin/libsvm/](http://www.csie.ntu.edu.tw/~cjlin/libsvm/):
 
-Chih-Chung Chang and Chih-Jen Lin, LIBSVM : a library for support
-vector machines. ACM Transactions on Intelligent Systems and
-Technology, 2:27:1--27:27, 2011. Software available at
-http://www.csie.ntu.edu.tw/~cjlin/libsvm
+   Chih-Chung Chang and Chih-Jen Lin, LIBSVM : a library for support
+   vector machines. ACM Transactions on Intelligent Systems and
+   Technology, 2:27:1--27:27, 2011. Software available at
+   http://www.csie.ntu.edu.tw/~cjlin/libsvm
 
 * KMeans: [http://www.cs.umd.edu/~mount/Projects/KMeans/](http://www.cs.umd.edu/~mount/Projects/KMeans/);
 * Feature points: [http://lear.inrialpes.fr/people/wang/dense_trajectories](http://lear.inrialpes.fr/people/wang/dense_trajectories);
