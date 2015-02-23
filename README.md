@@ -10,14 +10,14 @@ visionAction: can be implemented on the robot to recognize human actions through
 
 recordVideoLocal: can be implemented on the robot to capture video.
 
-argvToSpeech: can send the words to the robot and make it speek.
+argvToSpeech: can send the words to the robot and make it speak.
 
 decreaseSize: decrease the size of video.
 
 detectFps: detect the fps of video.
 
 ## Activities
-For the moment the activities had to be recorded in a 2-second video (our video analysis programm is too long):
+For the moment the activities had to be recorded in a 2-second video:
 
 	- applaud
 	- fall
@@ -40,7 +40,7 @@ For the moment the activities had to be recorded in a 2-second video (our video 
 
 * KMeans: [http://www.cs.umd.edu/~mount/Projects/KMeans/](http://www.cs.umd.edu/~mount/Projects/KMeans/);
 * Feature points: [http://lear.inrialpes.fr/people/wang/dense_trajectories](http://lear.inrialpes.fr/people/wang/dense_trajectories);
-* NAO sofwares: [https://developer.aldebaran-robotics.com/home/](https://developer.aldebaran-robotics.com/home/);
+* NAO Robot SDK: [https://developer.aldebaran-robotics.com/home/](https://developer.aldebaran-robotics.com/home/);
 
 ## Licence:
 This work is under the free software licence [CeCILL](http://www.cecill.info/).
